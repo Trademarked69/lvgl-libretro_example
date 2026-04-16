@@ -1,20 +1,41 @@
-TARGET_NAME := helloworld
+TARGET_NAME := HelloLVGL
+VERSION := 1.0
 
-SOURCES_C := src/helloworld.c
+SOURCES_C := $(shell find src -name '*.c')
 
 CFLAGS :=
 LDFLAGS :=
 
-TARGET := helloworld.a
-MIPS=/opt/mips32-mti-elf/2019.09-03-2/bin/mips-mti-elf-
-CC = $(MIPS)gcc
-AR = $(MIPS)ar
-CFLAGS += -EL -march=mips32 -mtune=mips32 -msoft-float -G0 -mno-abicalls -fno-pic
-CFLAGS += -ffast-math -fomit-frame-pointer -ffunction-sections -fdata-sections
-CFLAGS += -DSF2000
-STATIC_LINKING = 1
+# Unix 
+ifeq ($(platform), unix)
+	TARGET := $(TARGET_NAME)_libretro.so
+    CC := gcc
+    AR := ar
+    CFLAGS += -fPIC -Wall -O2 -g
+    LDFLAGS += -shared -Wl,--no-undefined
+    STATIC_LINKING = 0
+# SF2000
+else ifeq ($(platform), sf2000)
+	TARGET := $(TARGET_NAME).a
+	MIPS=/opt/mips32-mti-elf/2019.09-03-2/bin/mips-mti-elf-
+	CC = $(MIPS)gcc
+	AR = $(MIPS)ar
+	CFLAGS += -EL -march=mips32 -mtune=mips32 -msoft-float -G0 -mno-abicalls -fno-pic
+	CFLAGS += -ffast-math -fomit-frame-pointer -ffunction-sections -fdata-sections
+	CFLAGS += -DSF2000 -I ../../
+	STATIC_LINKING = 1
+endif
+
+CFLAGS += -DTARGET_NAME=\"$(TARGET_NAME)\" -DVERSION=\"$(VERSION)\"
+CFLAGS += -Werror
 
 OBJECTS := $(SOURCES_C:.c=.o)
+
+# Add LVGL components
+# Maybe in the future it should be a seperate lvgl.a for all cores to link with
+LVGL_DIR ?= ${shell pwd}
+include $(LVGL_DIR)/lvgl/lvgl.mk
+OBJECTS += $(CSRCS:.c=.o) $(CXXSRCS:.cpp=.o) $(ASRCS:.S=.o)
 
 all: $(TARGET)
 
